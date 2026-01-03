@@ -101,7 +101,7 @@ class IdaCalcWidget(QtWidgets.QWidget):
         Info = QtWidgets.QLabel(
             "• Supports hex, decimal, binary\n"
             "• Bitwise ops: & | ^ << >>\n"
-            "• Use ^ for XOR, ** for power\n"
+            "• Use ^ for power\n"
             "• Use / for integer division\n"
             "• Hotkey: Ctrl+Shift+C"
         )
