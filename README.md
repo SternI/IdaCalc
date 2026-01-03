@@ -57,7 +57,7 @@ IdaCalc is a lightweight programming calculator plugin for **IDA Pro**, designed
 | `/`      | Integer division |
 | `^`      | Power |
 | `&`      | Bitwise AND |
-| `|`      | Bitwise OR |
+| `\|`     | Bitwise OR |
 | `<<`     | Left shift |
 | `>>`     | Right shift |
 
