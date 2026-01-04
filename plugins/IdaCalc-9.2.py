@@ -31,9 +31,9 @@ class IdaCalcWidget(QtWidgets.QWidget):
         Layout.addLayout(InputLayout)
         
         OpLayout = QtWidgets.QHBoxLayout()
-        Operators = ['+', '-', '*', '//', '<<', '>>', '&', '|', '^']
+        Operators = ['+', '-', '*', '//', '<<', '>>', '&&', '|', '^']
         for op in Operators:
-            DisplayText = op.replace('&', '&&')
+            DisplayText = op.replace('&&', '&')
             DisplayText = op.replace('//', '/')
             Btn = QtWidgets.QPushButton(DisplayText)
             Btn.clicked.connect(lambda checked, o=op: self.AddOperator(o))
