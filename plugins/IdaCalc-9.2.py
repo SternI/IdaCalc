@@ -1,18 +1,19 @@
 import idaapi
 import ida_kernwin
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets, QtGui
 
-class IdaCalcWidget(QtWidgets.QWidget):
+class IdaCalcWidget(idaapi.PluginForm):
     def __init__(self):
         super().__init__()
         self.History = []
+        self.UnsignedMode = False
+        self.BitWidth = 64
+        
+    def OnCreate(self, form):
+        self.Parent = self.FormToPyQtWidget(form)
         self.InitUI()
-        
+                
     def InitUI(self):
-        self.setWindowTitle("IdaCalc - Programming Calculator")
-        self.setMinimumWidth(500)
-        self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.WindowStaysOnTopHint)
-        
         Layout = QtWidgets.QVBoxLayout()
         Layout.setSpacing(10)
         
@@ -45,6 +46,20 @@ class IdaCalcWidget(QtWidgets.QWidget):
         CalcBtn.clicked.connect(self.Calculate)
         CalcBtn.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; }")
         Layout.addWidget(CalcBtn)
+        
+        UnsignedLayout = QtWidgets.QHBoxLayout()
+        self.UnsignedCheck = QtWidgets.QCheckBox("Unsigned Mode (Mask to bit width)")
+        self.UnsignedCheck.stateChanged.connect(self.OnUnsignedToggle)
+        UnsignedLayout.addWidget(self.UnsignedCheck)
+        
+        UnsignedLayout.addWidget(QtWidgets.QLabel("Bit Width:"))
+        self.BitWidthCombo = QtWidgets.QComboBox()
+        self.BitWidthCombo.addItems(["8-bit", "16-bit", "32-bit", "64-bit"])
+        self.BitWidthCombo.setCurrentIndex(3)
+        self.BitWidthCombo.currentIndexChanged.connect(self.OnBitWidthChange)
+        UnsignedLayout.addWidget(self.BitWidthCombo)
+        
+        Layout.addLayout(UnsignedLayout)
 
         ResultGroup = QtWidgets.QGroupBox("Result")
         ResultLayout = QtWidgets.QVBoxLayout()
@@ -100,16 +115,31 @@ class IdaCalcWidget(QtWidgets.QWidget):
         
         Info = QtWidgets.QLabel(
             "• Supports hex, decimal, binary\n"
-            "• Bitwise ops: & | ^ << >>\n"
+            "• Bitwise ops: & | << >>\n"
             "• Use ^ for power\n"
             "• Use / for integer division\n"
+            "• Unsigned mode masks overflow\n"
             "• Hotkey: Ctrl+Shift+C"
         )
         Info.setStyleSheet("QLabel { color: gray; font-size: 9pt; }")
         Layout.addWidget(Info)
         
-        self.setLayout(Layout)
+        self.Parent.setLayout(Layout)
         self.InputField.setFocus()
+    
+    def OnClose(self, form):
+        pass
+    
+    def OnUnsignedToggle(self, state):
+        self.UnsignedMode = (state == 2)
+        if self.ResultDec.text():
+            self.Calculate()
+    
+    def OnBitWidthChange(self, index):
+        widths = [8, 16, 32, 64]
+        self.BitWidth = widths[index]
+        if self.UnsignedMode and self.ResultDec.text():
+            self.Calculate()
         
     def AddOperator(self, op):
         Current = self.InputField.text()
@@ -154,21 +184,35 @@ class IdaCalcWidget(QtWidgets.QWidget):
             ExprEval = ExprEval.replace('^', '**')
 
             Result = eval(ExprEval)
-            
+                        
             if isinstance(Result, float):
                 if Result.is_integer():
                     Result = int(Result)
             
             if isinstance(Result, int):
-                self.ResultHex.setText(f"0x{Result:X}" if Result >= 0 else f"-0x{abs(Result):X}")
-                self.ResultDec.setText(str(Result))
-                self.ResultBin.setText(bin(Result))
+                DisplayResult = Result
                 
-                HistoryText = f"{Expr} = {Result} (0x{Result:X})" if Result >= 0 else f"{Expr} = {Result} (-0x{abs(Result):X})"
+                if self.UnsignedMode:
+                    mask = (1 << self.BitWidth) - 1
+                    DisplayResult = Result & mask
+                    
+                    self.ResultHex.setText(f"0x{DisplayResult:X}")
+                    self.ResultDec.setText(str(DisplayResult))
+                    self.ResultBin.setText(bin(DisplayResult))
+                    
+                    HistoryText = f"{Expr} = {DisplayResult} (0x{DisplayResult:X}) [unsigned {self.BitWidth}-bit]"
+                else:
+                    self.ResultHex.setText(f"0x{Result:X}" if Result >= 0 else f"-0x{abs(Result):X}")
+                    self.ResultDec.setText(str(Result))
+                    self.ResultBin.setText(bin(Result))
+                    
+                    HistoryText = f"{Expr} = {Result} (0x{Result:X})" if Result >= 0 else f"{Expr} = {Result} (-0x{abs(Result):X})"
+                
                 if HistoryText not in [self.HistoryList.item(i).text() for i in range(self.HistoryList.count())]:
                     self.HistoryList.insertItem(0, HistoryText)
                     if self.HistoryList.count() > 10:
                         self.HistoryList.takeItem(10)
+                        
             elif isinstance(Result, float):
                 self.ResultDec.setText(str(Result))
                 self.ResultHex.setText(f"0x{int(Result):X}")
@@ -185,6 +229,8 @@ class IdaCalcWidget(QtWidgets.QWidget):
                 self.ResultBin.clear()
                 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             ida_kernwin.warning(f"IdaCalc: Error calculating: {str(e)}")
             
     def CopyHex(self):
@@ -247,6 +293,19 @@ class IdaCalcWidget(QtWidgets.QWidget):
             
     def LoadFromHistory(self, item):
         Text = item.text()
+        
+        if 'unsigned' in Text:
+            import re
+            match = re.search(r'\[unsigned (\d+)-bit\]', Text)
+            if match:
+                bit_width = int(match.group(1))
+                width_map = {8: 0, 16: 1, 32: 2, 64: 3}
+                if bit_width in width_map:
+                    self.BitWidthCombo.setCurrentIndex(width_map[bit_width])
+            self.UnsignedCheck.setChecked(True)
+        else:
+            self.UnsignedCheck.setChecked(False)
+        
         Expr = Text.split('=')[0].strip()
         self.InputField.setText(Expr)
         self.Calculate()
@@ -254,28 +313,26 @@ class IdaCalcWidget(QtWidgets.QWidget):
 
 class IdaCalcPlugin(idaapi.plugin_t):
     flags = idaapi.PLUGIN_KEEP
-    comment = "IdaCalc - Programming calculator for IDA Pro 9.2"
+    comment = "IdaCalc - Programming calculator for IDA Pro 9.2+"
     help = "IdaCalc - Programming calculator with hex support"
     wanted_name = "IdaCalc"
     wanted_hotkey = "Ctrl-Shift-C"
     
     def init(self):
         self.Widget = None
-        print("IdaCalc: Plugin loaded! Press Ctrl+Shift+C to oepn.")
+        print("IdaCalc: Plugin loaded! Press Ctrl+Shift+C to open.")
         return idaapi.PLUGIN_KEEP
         
     def run(self, arg):
         if self.Widget is None:
             self.Widget = IdaCalcWidget()
         
-        self.Widget.show()
-        self.Widget.activateWindow()
-        self.Widget.raise_()
-        self.Widget.InputField.setFocus()
+        self.Widget.Show("IdaCalc", options=(ida_kernwin.WOPN_RESTORE | ida_kernwin.WOPN_PERSIST))
+        ida_kernwin.set_dock_pos("IdaCalc", None, ida_kernwin.DP_FLOATING)
         
     def term(self):
         if self.Widget:
-            self.Widget.close()
+            self.Widget.Close(idaapi.PluginForm.WCLS_SAVE)
 
 
 def PLUGIN_ENTRY():

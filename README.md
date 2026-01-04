@@ -1,6 +1,6 @@
 # IdaCalc - Programming Calculator for IDA Pro
 
-IdaCalc is a lightweight programming calculator plugin for **IDA Pro**, designed to simplify calculations during reverse engineering or low-level programming tasks. It supports hexadecimal, decimal, binary, and common bitwise operations, with easy clipboard integration and a history feature.  
+IdaCalc is a lightweight programming calculator plugin for **IDA Pro**, designed to simplify calculations during reverse engineering or low-level programming tasks. It supports hexadecimal, decimal, binary, common bitwise operations, and unsigned arithmetic with configurable bit widths. Clipboard integration and a history feature make repeated calculations easy.  
 
 ![Screenshot](Images/Interface.png)
 
@@ -9,11 +9,11 @@ IdaCalc is a lightweight programming calculator plugin for **IDA Pro**, designed
 ## Features
 
 - Supports **hexadecimal, decimal, and binary** numbers.
-- Common operations: `+`, `-`, `*`, integer division `/`, bitwise `&`, `|`, `^`, `<<`, `>>`.
+- Common operations: `+`, `-`, `*`, `/`, bitwise `&`, `|`, `^`, `<<`, `>>`.
+- **Unsigned mode** with configurable bit width (8, 16, 32, 64).
 - Converts results automatically to **hex, decimal, and binary**.
 - **Copy results** to clipboard as hex, decimal, or little-endian hex bytes.
 - **History feature**: click on previous expressions to reuse them.
-- Lightweight **PySide6 GUI** that stays on top of IDA.
 - Hotkey support: `Ctrl+Shift+C` to open the calculator quickly.
 
 ---
@@ -22,25 +22,24 @@ IdaCalc is a lightweight programming calculator plugin for **IDA Pro**, designed
 
 1. Copy `IdaCalc-x.x.py` into your IDA Pro `plugins` directory:
 
-   ```text
-   <IDA_INSTALL_DIR>/plugins/
-   ```
+    ```text
+    <IDA_INSTALL_DIR>/plugins/
+    ```
 
-2. Restart IDA Pro.
-
+2. Restart IDA Pro if it was already running.
 3. Open the calculator with **Ctrl+Shift+C** or via the IDA Plugins menu.
 
 ---
 
 ## Usage
 
-1. Enter an expression in the input box:
+1. Enter an expression in the input box, e.g:
 
-   ```text
-   0x12345678 - 0x67
-   ```
+    ```text
+    0x12345678 - 0x67
+    ```
 
-2. Click **Calculate**.
+2. Click **Calculate** or press **Enter**.
 3. View results in **Hex**, **Decimal**, or **Binary**.
 4. Click **Copy Hex**, **Copy Dec**, or **Copy as Hex Bytes** to copy results to the clipboard.
 5. Double-click a previous calculation in the **History** section to reuse it.
@@ -65,7 +64,7 @@ IdaCalc is a lightweight programming calculator plugin for **IDA Pro**, designed
 
 ### Requirements
 
-#### IDA Pro 9.2
+#### IDA Pro 9.2+
 - Python 3.x support in IDA
 - PySide6 installed (`pip install PySide6` if needed)
 
